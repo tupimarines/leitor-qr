@@ -1,0 +1,741 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Check-in | Leitor de QR</title>
+  <meta name="color-scheme" content="light dark">
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --fg: #0f172a;
+      --muted: #64748b;
+      --primary: #0ea5e9;
+      --primary-hover: #0284c7;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --ok: #10b981;
+      --err: #ef4444;
+      --warn: #f59e0b;
+      --radius: 12px;
+      --space: clamp(12px, 2.5vw, 20px);
+      --tap: 44px;
+      --shadow: 0 10px 15px -3px rgb(0 0 0 / 0.15), 0 4px 6px -4px rgb(0 0 0 / 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --fg: #f1f5f9;
+        --muted: #94a3b8;
+        --primary: #0ea5e9;
+        --primary-hover: #38bdf8;
+        --card: #1e293b;
+        --border: #334155;
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font: 16px/1.6 system-ui, -apple-system, 'Segoe UI', Roboto, 'Inter', Arial, sans-serif;
+      min-height: 100vh;
+    }
+
+    .wrap {
+      max-width: min(900px, 100%);
+      margin: 0 auto;
+      padding: var(--space);
+    }
+
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    h1 {
+      font-size: clamp(1.25rem, 3vw, 1.75rem);
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      padding: 8px 16px;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: clamp(16px, 3vw, 24px);
+      box-shadow: var(--shadow);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+
+    select,
+    button {
+      background: var(--card);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 16px;
+      min-height: var(--tap);
+      font: 500 0.95rem/1.2 inherit;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    select:hover,
+    button:hover:not(:disabled) {
+      border-color: var(--primary);
+      box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    }
+
+    button.primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+      font-weight: 700;
+    }
+
+    button.primary:hover:not(:disabled) {
+      background: var(--primary-hover);
+      border-color: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .video-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1;
+      max-width: 400px;
+      margin: 0 auto;
+      background: #000;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: var(--shadow);
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .scan-square {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 70%;
+      height: 70%;
+      border: 3px solid var(--primary);
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 9999px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+    }
+
+    .scan-square::before,
+    .scan-square::after {
+      content: '';
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      border: 3px solid var(--primary);
+    }
+
+    .scan-square::before {
+      top: -3px;
+      left: -3px;
+      border-right: none;
+      border-bottom: none;
+    }
+
+    .scan-square::after {
+      bottom: -3px;
+      right: -3px;
+      border-left: none;
+      border-top: none;
+    }
+
+    .small {
+      font-size: 0.875rem;
+      color: var(--muted);
+      line-height: 1.5;
+      margin-top: 12px;
+    }
+
+    code {
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, monospace;
+    }
+
+    .info-section {
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .info-section:first-child {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: none;
+    }
+
+    .badge {
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.875rem;
+      background: var(--bg);
+    }
+
+    .resultBanner {
+      margin-top: 16px;
+      padding: 12px 16px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .resultBanner.ok {
+      background: rgba(16, 185, 129, 0.1);
+      border-color: var(--ok);
+    }
+
+    .resultBanner.warn {
+      background: rgba(245, 158, 11, 0.1);
+      border-color: var(--warn);
+    }
+
+    .resultBanner.err {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--err);
+    }
+
+    .mono {
+      font-family: ui-monospace, SFMono-Regular, Monaco, Consolas, monospace;
+      background: var(--bg);
+      padding: 10px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      top: 18px;
+      transform: translateX(-50%);
+      padding: 14px 18px;
+      border-radius: 12px;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.4px;
+      text-shadow: 0 1px 1px rgba(0, 0, 0, 0.25);
+      box-shadow: var(--shadow);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+      will-change: opacity, transform;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .toast.hide {
+      opacity: 0;
+      transform: translateX(-50%) translateY(-8px);
+    }
+
+    .toast.green {
+      background: var(--ok);
+    }
+
+    .toast.red {
+      background: var(--err);
+    }
+
+    .toast.orange {
+      background: var(--warn);
+    }
+
+    @media (max-width: 600px) {
+      .controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      label,
+      select,
+      button {
+        width: 100%;
+      }
+
+      .video-container {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Check-in • Leitor de QR</h1>
+      <div class="pill"><span id="permState">Verificando…</span></div>
+    </header>
+
+    <div class="card">
+      <div class="controls">
+        <label>
+          Câmera:
+          <select id="cameraSelect" aria-label="Selecionar câmera"></select>
+        </label>
+        <button id="refresh" title="Recarregar lista de câmeras">↻ Atualizar</button>
+        <button id="toggleTorch" disabled>🔦 Lanterna</button>
+        <button id="start" class="primary">Iniciar</button>
+        <button id="stop" disabled>Parar</button>
+      </div>
+
+      <div class="video-container">
+        <video id="video" playsinline muted></video>
+        <div class="scan-square"></div>
+      </div>
+
+      <div class="small">
+        Alinhe o QR code com o quadrado. Se o QR tiver <code>/webhook/...</code>, enviamos via
+        <b>POST</b> (JSON) para essa URL.
+      </div>
+
+      <div class="info-section">
+        <strong>Status:</strong> <span id="status">Aguardando…</span>
+      </div>
+
+      <div class="resultBanner" id="resultBanner" style="display: none">
+        <span class="badge" id="resultCode">—</span>
+        <span id="resultText">—</span>
+      </div>
+
+      <div class="info-section">
+        <span style="font-weight: 600; display: block; margin-bottom: 8px">Resposta (body):</span>
+        <pre class="mono" id="respBody" style="max-height: 180px; overflow: auto">—</pre>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    const FALLBACK_WEBHOOK = "https://autowebhook.ensitec.edu.br/webhook/checkin";
+
+    const video = document.getElementById('video');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const refreshBtn = document.getElementById('refresh');
+    const startBtn = document.getElementById('start');
+    const stopBtn = document.getElementById('stop');
+    const torchBtn = document.getElementById('toggleTorch');
+    const statusEl = document.getElementById('status');
+    const permStateEl = document.getElementById('permState');
+    const respBody = document.getElementById('respBody');
+    const resultBanner = document.getElementById('resultBanner');
+    const resultCode = document.getElementById('resultCode');
+    const resultText = document.getElementById('resultText');
+    const toastEl = document.getElementById('toast');
+
+    let stream = null;
+    let rafId = null;
+    let toastTimer = null;
+
+    function showToast(message, variant) {
+      toastEl.className = `toast ${variant}`;
+      toastEl.textContent = message;
+      toastEl.classList.add('show');
+      toastEl.classList.remove('hide');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toastEl.classList.add('hide');
+        toastEl.classList.remove('show');
+      }, 4000);
+    }
+
+    function toastByStatus(code, data) {
+      let variant = 'red';
+      let defaultMsg = '';
+
+      if (code === 200) {
+        variant = 'green';
+        defaultMsg = 'ENTRADA LIBERADA';
+      } else if (code === 409) {
+        variant = 'red';
+        defaultMsg = 'CONVITE JÁ UTILIZADO';
+      } else if (code === 404) {
+        variant = 'orange';
+        defaultMsg = 'CONVITE NÃO ENCONTRADO';
+      } else if (code === 400) {
+        variant = 'red';
+        defaultMsg = 'QR CODE INVÁLIDO';
+      } else if (code >= 200 && code < 300) {
+        variant = 'green';
+        defaultMsg = 'Check-in processado (' + code + ')';
+      } else {
+        variant = 'red';
+        defaultMsg = 'Erro no servidor (' + code + ')';
+      }
+
+      const bodyMsg = (data && (data.message || data.title)) || null;
+      const finalMsg = bodyMsg || defaultMsg || 'Operação concluída';
+      showToast(finalMsg, variant);
+    }
+
+    async function queryPermission() {
+      try {
+        const res = await navigator.permissions.query({ name: 'camera' });
+        const txt =
+          res.state === 'granted'
+            ? 'Câmera permitida ✅'
+            : res.state === 'denied'
+            ? 'Câmera bloqueada ❌'
+            : 'Permissão pendente ⏳';
+        permStateEl.textContent = txt;
+        res.onchange = () => {
+          permStateEl.textContent = res.state;
+        };
+      } catch (e) {
+        permStateEl.textContent = 'Permissão não disponível';
+      }
+    }
+
+    function getVideoTrack() {
+      return stream?.getVideoTracks?.()[0] || null;
+    }
+
+    function updateTorchAvailability() {
+      const caps = getVideoTrack()?.getCapabilities?.();
+      torchBtn.disabled = !(caps && 'torch' in caps);
+    }
+
+    async function toggleTorch() {
+      const track = getVideoTrack();
+      if (!track?.applyConstraints) return;
+      const settings = track.getSettings();
+      const newTorch = !settings.torch;
+      try {
+        await track.applyConstraints({ advanced: [{ torch: newTorch }] });
+        torchBtn.textContent = newTorch ? '🔦 Lanterna (ON)' : '🔦 Lanterna';
+      } catch (e) {
+        showToast('Lanterna não suportada', 'orange');
+      }
+    }
+
+    async function ensureLabels() {
+      try {
+        const tmp = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: { ideal: 'environment' } },
+          audio: false
+        });
+        tmp.getTracks().forEach(t => t.stop());
+      } catch (e) {
+        // Silencioso
+      }
+    }
+
+    async function listCameras() {
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videos = devices.filter(d => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        for (const d of videos) {
+          const opt = document.createElement('option');
+          opt.value = d.deviceId;
+          opt.textContent = d.label || `Câmera ${cameraSelect.length + 1}`;
+          cameraSelect.appendChild(opt);
+        }
+        const rear = videos.find(d => /back|rear|environment|traseira/i.test(d.label));
+        if (rear) cameraSelect.value = rear.deviceId;
+      } catch (e) {
+        showToast('Erro ao listar câmeras', 'red');
+      }
+    }
+
+    async function openCamera() {
+      statusEl.textContent = 'Abrindo câmera…';
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      await ensureLabels();
+      await listCameras();
+
+      const targetId = cameraSelect.value || undefined;
+      const constraints = {
+        audio: false,
+        video: {
+          ...(targetId ? { deviceId: { exact: targetId } } : { facingMode: { ideal: 'environment' } }),
+          width: { ideal: 1920 },
+          height: { ideal: 1080 },
+          advanced: [{ focusMode: 'continuous' }]
+        }
+      };
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = stream;
+        video.autoplay = true;
+
+        await new Promise(resolve => {
+          const onReady = () => resolve();
+          video.addEventListener('loadedmetadata', onReady, { once: true });
+          setTimeout(resolve, 1200);
+        });
+
+        await video.play().catch(() => {});
+        updateTorchAvailability();
+        statusEl.textContent = 'Câmera aberta ✅';
+        return true;
+      } catch (e) {
+        statusEl.textContent = 'Erro ao abrir câmera';
+        showToast('Falha ao acessar câmera: ' + e.message, 'red');
+        return false;
+      }
+    }
+
+    function stopAll() {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = null;
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+      statusEl.textContent = 'Parado';
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+    }
+
+    function isWebhookUrl(u) {
+      try {
+        const url = new URL(u);
+        return /\/webhook\//.test(url.pathname);
+      } catch {
+        return false;
+      }
+    }
+
+    function extractQrhash(u) {
+      try {
+        const url = new URL(u);
+        return url.searchParams.get('qrhash') || url.searchParams.get('qr') || url.searchParams.get('hash') || u;
+      } catch {
+        return u;
+      }
+    }
+
+    async function callWebhookPOST(urlString, token, raw) {
+      const payload = { qrhash: token, raw, origin: 'camera' };
+      statusEl.textContent = 'Enviando…';
+
+      try {
+        const res = await fetch(urlString, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          mode: 'cors',
+          credentials: 'omit'
+        });
+
+        const httpStatus = res.status;
+        let text = '';
+        let data = null;
+        const ct = res.headers.get('content-type') || '';
+
+        try {
+          if (ct.includes('application/json')) {
+            data = await res.json();
+            text = JSON.stringify(data, null, 2);
+          } else {
+            text = await res.text();
+            try {
+              data = JSON.parse(text);
+            } catch {
+              // ignora parse
+            }
+          }
+        } catch (e) {
+          text = '';
+        }
+
+        respBody.textContent = text || '—';
+        resultBanner.style.display = 'flex';
+
+        const effectiveCodeRaw = data && typeof data.code !== 'undefined' ? data.code : httpStatus;
+        const effectiveCode = Number(effectiveCodeRaw);
+
+        resultCode.textContent = String(effectiveCode);
+        resultText.textContent = (text || '').slice(0, 240) || 'OK';
+
+        resultBanner.className = 'resultBanner ' + (effectiveCode >= 200 && effectiveCode < 300 ? 'ok' : effectiveCode >= 400 && effectiveCode < 500 ? 'warn' : 'err');
+
+        statusEl.textContent = res.ok ? 'Enviado ✅' : 'Erro: ' + httpStatus;
+
+        toastByStatus(effectiveCode, data || null);
+        return res.ok;
+      } catch (e) {
+        statusEl.textContent = 'Erro ao enviar';
+        showToast('Erro de conexão com servidor', 'red');
+        return false;
+      }
+    }
+
+    async function sendAfterScan(text) {
+      const token = extractQrhash(text);
+
+      if (isWebhookUrl(text)) {
+        try {
+          const u = new URL(text);
+          u.search = '';
+          await callWebhookPOST(u.toString(), token, text);
+          return;
+        } catch (e) {
+          // Continua para fallback
+        }
+      }
+      await callWebhookPOST(FALLBACK_WEBHOOK, token, text);
+    }
+
+    async function startScan() {
+      stopAll();
+      const ok = await openCamera();
+      if (!ok) return;
+      stopBtn.disabled = false;
+      startBtn.disabled = true;
+
+      let tries = 0;
+      while ((video.videoWidth | 0) === 0 && tries < 50) {
+        await new Promise(r => setTimeout(r, 50));
+        tries++;
+      }
+
+      if ('BarcodeDetector' in window) {
+        try {
+          const bd = new window.BarcodeDetector({ formats: ['qr_code'] });
+          statusEl.textContent = 'Lendo QR…';
+
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+
+          const loop = async () => {
+            if (!stream) return;
+            const w = video.videoWidth || 1280;
+            const h = video.videoHeight || 720;
+            canvas.width = w;
+            canvas.height = h;
+            ctx.drawImage(video, 0, 0, w, h);
+
+            try {
+              const r = await bd.detect(canvas);
+              if (r && r.length) {
+                const text = r[0].rawValue;
+                statusEl.textContent = 'QR detectado ✅';
+                await sendAfterScan(text).catch(() => {});
+                stopAll();
+                return;
+              }
+            } catch (e) {
+              // Ignora erro
+            }
+            rafId = requestAnimationFrame(loop);
+          };
+
+          rafId = requestAnimationFrame(loop);
+          return;
+        } catch (e) {
+          // Continua para ZXing
+        }
+      }
+
+      try {
+        statusEl.textContent = 'Lendo QR…';
+        const mod = await import('https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm');
+        const { BrowserQRCodeReader } = mod;
+        const reader = new BrowserQRCodeReader();
+
+        await reader.decodeFromVideoElementContinuously(video, async (result, err) => {
+          if (result) {
+            const text = result.getText();
+            statusEl.textContent = 'QR detectado ✅';
+            await sendAfterScan(text).catch(() => {});
+            reader.reset();
+            stopAll();
+          } else if (err && err.name !== 'NotFoundException') {
+            statusEl.textContent = 'Erro: ' + err.message;
+          }
+        });
+      } catch (e) {
+        statusEl.textContent = 'Erro ao iniciar leitor';
+        showToast('Erro ao carregar leitor de QR', 'red');
+      }
+    }
+
+    cameraSelect.addEventListener('change', openCamera);
+    refreshBtn.addEventListener('click', () => {
+      ensureLabels().then(listCameras);
+    });
+    startBtn.addEventListener('click', startScan);
+    stopBtn.addEventListener('click', stopAll);
+    torchBtn.addEventListener('click', toggleTorch);
+
+    queryPermission();
+    listCameras();
+  </script>
+</body>
+</html>
