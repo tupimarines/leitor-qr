@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="pt-BR">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -329,6 +330,7 @@
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <header>
@@ -377,7 +379,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
   <script>
-    const FALLBACK_WEBHOOK = "https://autowebhook.ensitec.edu.br/webhook/checkin";
+    const FALLBACK_WEBHOOK = "https://n8n.wbtech.dev/webhook-test/checkin";
 
     const video = document.getElementById('video');
     const cameraSelect = document.getElementById('cameraSelect');
@@ -445,8 +447,8 @@
           res.state === 'granted'
             ? 'Câmera permitida ✅'
             : res.state === 'denied'
-            ? 'Câmera bloqueada ❌'
-            : 'Permissão pendente ⏳';
+              ? 'Câmera bloqueada ❌'
+              : 'Permissão pendente ⏳';
         permStateEl.textContent = txt;
         res.onchange = () => {
           permStateEl.textContent = res.state;
@@ -539,7 +541,7 @@
           setTimeout(resolve, 1200);
         });
 
-        await video.play().catch(() => {});
+        await video.play().catch(() => { });
         updateTorchAvailability();
         statusEl.textContent = 'Câmera aberta ✅';
         return true;
@@ -686,7 +688,7 @@
               if (r && r.length) {
                 const text = r[0].rawValue;
                 statusEl.textContent = 'QR detectado ✅';
-                await sendAfterScan(text).catch(() => {});
+                await sendAfterScan(text).catch(() => { });
                 stopAll();
                 return;
               }
@@ -713,7 +715,7 @@
           if (result) {
             const text = result.getText();
             statusEl.textContent = 'QR detectado ✅';
-            await sendAfterScan(text).catch(() => {});
+            await sendAfterScan(text).catch(() => { });
             reader.reset();
             stopAll();
           } else if (err && err.name !== 'NotFoundException') {
@@ -738,4 +740,5 @@
     listCameras();
   </script>
 </body>
+
 </html>
